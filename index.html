@@ -1,402 +1,458 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
-    <meta name="apple-mobile-web-app-title" content="習慣トラッカー" />
-    <title>中村ぽんた</title>
-    <script
-      crossorigin
-      src="https://unpkg.com/react@18/umd/react.production.min.js"
-    ></script>
-    <script
-      crossorigin
-      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
-    ></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家計簿アプリ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-      const { useState, useEffect } = React;
-
-      const Plus = () => (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      );
-
-      const X = () => (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      );
-
-      const ChevronLeft = () => (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      );
-
-      const ChevronRight = () => (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      );
-
-      const HabitTracker = () => {
-        const [habits, setHabits] = useState([]);
-        const [newHabitName, setNewHabitName] = useState("");
-        const [viewMode, setViewMode] = useState("week");
-        const [currentDate, setCurrentDate] = useState(new Date());
-
-        // ローカルストレージから読み込み
-        useEffect(() => {
-          const saved = localStorage.getItem("habits");
-          if (saved) {
-            setHabits(JSON.parse(saved));
-          }
-        }, []);
-
-        // ローカルストレージに保存
-        useEffect(() => {
-          if (habits.length > 0) {
-            localStorage.setItem("habits", JSON.stringify(habits));
-          }
-        }, [habits]);
-
-        const addHabit = () => {
-          if (newHabitName.trim()) {
-            setHabits([
-              ...habits,
-              { id: Date.now(), name: newHabitName, completions: {} },
-            ]);
-            setNewHabitName("");
-          }
-        };
-
-        const removeHabit = (id) => {
-          setHabits(habits.filter((habit) => habit.id !== id));
-        };
-
-        const toggleCompletion = (habitId, dateStr) => {
-          setHabits(
-            habits.map((habit) => {
-              if (habit.id === habitId) {
-                const newCompletions = { ...habit.completions };
-                if (newCompletions[dateStr]) {
-                  delete newCompletions[dateStr];
-                } else {
-                  newCompletions[dateStr] = true;
-                }
-                return { ...habit, completions: newCompletions };
-              }
-              return habit;
-            })
-          );
-        };
-
-        const dateToString = (date) => {
-          return date.toISOString().split("T")[0];
-        };
-
-        const getWeekDates = (date) => {
-          const week = [];
-          const current = new Date(date);
-          const day = current.getDay();
-          const diff = current.getDate() - day;
-
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(current);
-            d.setDate(diff + i);
-            week.push(d);
-          }
-          return week;
-        };
-
-        const getMonthDates = (date) => {
-          const year = date.getFullYear();
-          const month = date.getMonth();
-          const firstDay = new Date(year, month, 1);
-          const lastDay = new Date(year, month + 1, 0);
-          const dates = [];
-
-          for (
-            let d = new Date(firstDay);
-            d <= lastDay;
-            d.setDate(d.getDate() + 1)
-          ) {
-            dates.push(new Date(d));
-          }
-          return dates;
-        };
-
-        const dates =
-          viewMode === "week"
-            ? getWeekDates(currentDate)
-            : getMonthDates(currentDate);
-
-        const navigatePrev = () => {
-          const newDate = new Date(currentDate);
-          if (viewMode === "week") {
-            newDate.setDate(newDate.getDate() - 7);
-          } else {
-            newDate.setMonth(newDate.getMonth() - 1);
-          }
-          setCurrentDate(newDate);
-        };
-
-        const navigateNext = () => {
-          const newDate = new Date(currentDate);
-          if (viewMode === "week") {
-            newDate.setDate(newDate.getDate() + 7);
-          } else {
-            newDate.setMonth(newDate.getMonth() + 1);
-          }
-          setCurrentDate(newDate);
-        };
-
-        const navigateToday = () => {
-          setCurrentDate(new Date());
-        };
-
-        const calculateCompletionRate = (habit) => {
-          const completed = dates.filter(
-            (date) => habit.completions[dateToString(date)]
-          ).length;
-          return Math.round((completed / dates.length) * 100);
-        };
-
-        const calculateStreak = (habit) => {
-          let streak = 0;
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          for (let i = 0; i < 365; i++) {
-            const checkDate = new Date(today);
-            checkDate.setDate(checkDate.getDate() - i);
-            const dateStr = dateToString(checkDate);
-
-            if (habit.completions[dateStr]) {
-              streak++;
-            } else {
-              break;
-            }
-          }
-          return streak;
-        };
-
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto">
-              <div className="mb-8 md:mb-12">
-                <h1 className="text-3xl md:text-5xl font-bold mb-2 text-gray-900 tracking-tight">
-                  中村ぽんた
-                </h1>
-                <p className="text-sm md:text-base text-gray-600">
-                  ぽんたの積み重ね
-                </p>
-              </div>
-
-              <div className="mb-6 md:mb-8 flex gap-2 md:gap-3">
-                <input
-                  type="text"
-                  value={newHabitName}
-                  onChange={(e) => setNewHabitName(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && addHabit()}
-                  placeholder="新しい習慣を追加..."
-                  className="flex-1 px-4 md:px-5 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-white shadow-sm text-sm md:text-base"
-                />
-                <button
-                  onClick={addHabit}
-                  className="px-4 md:px-6 py-2 md:py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center gap-2 shadow-md transition-all hover:shadow-lg text-sm md:text-base"
-                >
-                  <Plus />
-                  <span className="hidden md:inline">追加</span>
-                </button>
-              </div>
-
-              <div className="mb-6 md:mb-8 flex flex-col md:flex-row items-stretch md:items-center justify-between bg-white p-3 md:p-4 rounded-lg shadow-sm gap-3 md:gap-0">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setViewMode("week")}
-                    className={`flex-1 md:flex-none px-4 md:px-5 py-2 rounded-lg font-medium transition-all text-sm md:text-base ${
-                      viewMode === "week"
-                        ? "bg-gray-900 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    週間
-                  </button>
-                  <button
-                    onClick={() => setViewMode("month")}
-                    className={`flex-1 md:flex-none px-4 md:px-5 py-2 rounded-lg font-medium transition-all text-sm md:text-base ${
-                      viewMode === "month"
-                        ? "bg-gray-900 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    月間
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between md:gap-4">
-                  <button
-                    onClick={navigatePrev}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <ChevronLeft />
-                  </button>
-                  <button
-                    onClick={navigateToday}
-                    className="px-3 md:px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors text-sm md:text-base"
-                  >
-                    今日
-                  </button>
-                  <span className="font-semibold text-sm md:text-lg text-center text-gray-900 min-w-[140px] md:min-w-[200px]">
-                    {viewMode === "week"
-                      ? `${dates[0].getMonth() + 1}/${dates[0].getDate()} - ${
-                          dates[6].getMonth() + 1
-                        }/${dates[6].getDate()}`
-                      : `${currentDate.getFullYear()}年${
-                          currentDate.getMonth() + 1
-                        }月`}
-                  </span>
-                  <button
-                    onClick={navigateNext}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <ChevronRight />
-                  </button>
-                </div>
-              </div>
-
-              {habits.length === 0 ? (
-                <div className="text-center py-16 md:py-20 bg-white rounded-lg shadow-sm">
-                  <div className="text-gray-400 text-base md:text-lg mb-2">
-                    まだ習慣が登録されていません
-                  </div>
-                  <div className="text-gray-500 text-sm">
-                    習慣を追加して記録を始めましょう
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4 md:space-y-5">
-                  {habits.map((habit) => (
-                    <div
-                      key={habit.id}
-                      className="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition-shadow"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-5 gap-3 md:gap-0">
-                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
-                          <h3 className="text-xl md:text-2xl font-bold text-gray-900">
-                            {habit.name}
-                          </h3>
-                          <div className="flex gap-2 md:gap-4 text-xs md:text-sm">
-                            <span className="px-2 md:px-3 py-1 bg-gray-100 rounded-full text-gray-700 font-medium">
-                              🔥 連続 {calculateStreak(habit)}日
-                            </span>
-                            <span className="px-2 md:px-3 py-1 bg-gray-100 rounded-full text-gray-700 font-medium">
-                              📊 達成率 {calculateCompletionRate(habit)}%
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeHabit(habit.id)}
-                          className="self-end md:self-auto p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
-                        >
-                          <X />
+    <style>
+        .calendar-day {
+            aspect-ratio: 1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div id="app" class="max-w-6xl mx-auto">
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <!-- ヘッダー -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white">
+                <div class="flex justify-between items-start mb-6">
+                    <h1 class="text-3xl font-bold flex items-center gap-3">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        家計簿アプリ
+                    </h1>
+                    <div class="flex gap-2">
+                        <button id="listViewBtn" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-white text-blue-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                            リスト
                         </button>
-                      </div>
-
-                      <div className="grid gap-1.5 md:gap-2 grid-cols-7">
-                        {dates.map((date, index) => {
-                          const dateStr = dateToString(date);
-                          const isCompleted = habit.completions[dateStr];
-                          const isToday = dateToString(new Date()) === dateStr;
-
-                          return (
-                            <button
-                              key={index}
-                              onClick={() =>
-                                toggleCompletion(habit.id, dateStr)
-                              }
-                              className={`aspect-square rounded-lg flex flex-col items-center justify-center transition-all hover:scale-105 ${
-                                isCompleted
-                                  ? "bg-gray-900 text-white shadow-md"
-                                  : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              } ${
-                                isToday
-                                  ? "ring-2 ring-gray-400 ring-offset-2"
-                                  : ""
-                              }`}
-                            >
-                              <div className="text-[10px] md:text-xs font-medium">
-                                {date.getMonth() + 1}/{date.getDate()}
-                              </div>
-                              <div className="text-[9px] md:text-xs opacity-70">
-                                {
-                                  ["日", "月", "火", "水", "木", "金", "土"][
-                                    date.getDay()
-                                  ]
-                                }
-                              </div>
-                              {isCompleted && (
-                                <div className="text-sm md:text-lg mt-0.5 md:mt-1">
-                                  ✓
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                        <button id="calendarViewBtn" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-white/20 hover:bg-white/30">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            カレンダー
+                        </button>
                     </div>
-                  ))}
                 </div>
-              )}
+                
+                <!-- 残高サマリー -->
+                <div class="grid grid-cols-3 gap-4" id="summary">
+                    <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                            <span class="text-sm">収入</span>
+                        </div>
+                        <div class="text-2xl font-bold" id="totalIncome">¥0</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                            </svg>
+                            <span class="text-sm">支出</span>
+                        </div>
+                        <div class="text-2xl font-bold" id="totalExpense">¥0</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            </svg>
+                            <span class="text-sm">残高</span>
+                        </div>
+                        <div class="text-2xl font-bold" id="balance">¥0</div>
+                    </div>
+                </div>
             </div>
-          </div>
-        );
-      };
 
-      ReactDOM.render(<HabitTracker />, document.getElementById("root"));
+            <!-- リストビュー -->
+            <div id="listView">
+                <!-- 入力フォーム -->
+                <div class="p-8 border-b border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">新規登録</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">種類</label>
+                            <select id="type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="支出">支出</option>
+                                <option value="収入">収入</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">カテゴリー</label>
+                            <select id="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="食費">食費</option>
+                                <option value="交通費">交通費</option>
+                                <option value="娯楽">娯楽</option>
+                                <option value="光熱費">光熱費</option>
+                                <option value="医療">医療</option>
+                                <option value="その他">その他</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">日付</label>
+                            <input type="date" id="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">時間</label>
+                            <input type="time" id="time" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">金額</label>
+                            <input type="number" id="amount" placeholder="10000" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">内容</label>
+                            <input type="text" id="description" placeholder="例: スーパーで買い物" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <button id="addBtn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        追加
+                    </button>
+                </div>
+
+                <!-- カテゴリー別集計 -->
+                <div id="categorySection" class="p-8 border-b border-gray-200 bg-gray-50 hidden">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">カテゴリー別支出</h2>
+                    <div id="categoryTotals" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- 取引履歴 -->
+                <div class="p-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800">取引履歴</h2>
+                        <select id="filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="全て">全て</option>
+                            <option value="収入">収入のみ</option>
+                            <option value="支出">支出のみ</option>
+                        </select>
+                    </div>
+                    <div id="transactionList"></div>
+                </div>
+            </div>
+
+            <!-- カレンダービュー -->
+            <div id="calendarView" class="p-8 hidden">
+                <div class="mb-6 flex items-center justify-between">
+                    <button id="prevMonth" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        ← 前月
+                    </button>
+                    <h2 id="monthTitle" class="text-2xl font-bold text-gray-800"></h2>
+                    <button id="nextMonth" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        次月 →
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-7 gap-2 mb-6">
+                    <div class="text-center font-bold text-gray-600 py-2">日</div>
+                    <div class="text-center font-bold text-gray-600 py-2">月</div>
+                    <div class="text-center font-bold text-gray-600 py-2">火</div>
+                    <div class="text-center font-bold text-gray-600 py-2">水</div>
+                    <div class="text-center font-bold text-gray-600 py-2">木</div>
+                    <div class="text-center font-bold text-gray-600 py-2">金</div>
+                    <div class="text-center font-bold text-gray-600 py-2">土</div>
+                </div>
+                
+                <div id="calendarGrid" class="grid grid-cols-7 gap-2 mb-6"></div>
+
+                <div id="selectedDateDetails" class="bg-gray-50 rounded-lg p-6 hidden">
+                    <h3 id="selectedDateTitle" class="text-lg font-bold mb-4 text-gray-800"></h3>
+                    <div id="selectedDateTransactions"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // アプリの状態
+        let transactions = [];
+        let currentView = 'list';
+        let currentMonth = new Date();
+        let selectedDate = null;
+
+        const categories = {
+            支出: ['食費', '交通費', '娯楽', '光熱費', '医療', 'その他'],
+            収入: ['給与', '副業', 'ボーナス', 'その他']
+        };
+
+        // 初期化
+        function init() {
+            const now = new Date();
+            document.getElementById('date').value = now.toISOString().split('T')[0];
+            document.getElementById('time').value = now.toTimeString().slice(0, 5);
+            
+            setupEventListeners();
+            render();
+        }
+
+        // イベントリスナーの設定
+        function setupEventListeners() {
+            document.getElementById('addBtn').addEventListener('click', addTransaction);
+            document.getElementById('listViewBtn').addEventListener('click', () => switchView('list'));
+            document.getElementById('calendarViewBtn').addEventListener('click', () => switchView('calendar'));
+            document.getElementById('filter').addEventListener('change', render);
+            document.getElementById('type').addEventListener('change', updateCategories);
+            document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+            document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+        }
+
+        // カテゴリー更新
+        function updateCategories() {
+            const type = document.getElementById('type').value;
+            const categorySelect = document.getElementById('category');
+            categorySelect.innerHTML = categories[type].map(cat => 
+                `<option value="${cat}">${cat}</option>`
+            ).join('');
+        }
+
+        // 取引追加
+        function addTransaction() {
+            const amount = document.getElementById('amount').value;
+            const description = document.getElementById('description').value;
+            
+            if (!amount || !description) {
+                alert('金額と内容を入力してください');
+                return;
+            }
+
+            const transaction = {
+                id: Date.now(),
+                type: document.getElementById('type').value,
+                amount: parseFloat(amount),
+                description: description,
+                category: document.getElementById('category').value,
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                datetime: new Date(`${document.getElementById('date').value}T${document.getElementById('time').value}`)
+            };
+
+            transactions.push(transaction);
+            transactions.sort((a, b) => b.datetime - a.datetime);
+
+            // フォームリセット
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+            const now = new Date();
+            document.getElementById('date').value = now.toISOString().split('T')[0];
+            document.getElementById('time').value = now.toTimeString().slice(0, 5);
+
+            render();
+        }
+
+        // 取引削除
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            render();
+        }
+
+        // ビュー切り替え
+        function switchView(view) {
+            currentView = view;
+            document.getElementById('listView').classList.toggle('hidden', view !== 'list');
+            document.getElementById('calendarView').classList.toggle('hidden', view !== 'calendar');
+            
+            const listBtn = document.getElementById('listViewBtn');
+            const calendarBtn = document.getElementById('calendarViewBtn');
+            
+            if (view === 'list') {
+                listBtn.className = 'px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-white text-blue-600';
+                calendarBtn.className = 'px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-white/20 hover:bg-white/30';
+            } else {
+                listBtn.className = 'px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-white/20 hover:bg-white/30';
+                calendarBtn.className = 'px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-white text-blue-600';
+                renderCalendar();
+            }
+        }
+
+        // 月変更
+        function changeMonth(delta) {
+            currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1);
+            renderCalendar();
+        }
+
+        // レンダリング
+        function render() {
+            renderSummary();
+            renderCategoryTotals();
+            renderTransactionList();
+        }
+
+        // サマリーレンダリング
+        function renderSummary() {
+            const totalIncome = transactions.filter(t => t.type === '収入').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpense = transactions.filter(t => t.type === '支出').reduce((sum, t) => sum + t.amount, 0);
+            const balance = totalIncome - totalExpense;
+
+            document.getElementById('totalIncome').textContent = `¥${totalIncome.toLocaleString()}`;
+            document.getElementById('totalExpense').textContent = `¥${totalExpense.toLocaleString()}`;
+            document.getElementById('balance').textContent = `¥${balance.toLocaleString()}`;
+            document.getElementById('balance').className = `text-2xl font-bold ${balance >= 0 ? 'text-green-200' : 'text-red-200'}`;
+        }
+
+        // カテゴリー別集計レンダリング
+        function renderCategoryTotals() {
+            const categoryTotals = {};
+            transactions.filter(t => t.type === '支出').forEach(t => {
+                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+            });
+
+            const section = document.getElementById('categorySection');
+            const container = document.getElementById('categoryTotals');
+
+            if (Object.keys(categoryTotals).length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            container.innerHTML = Object.entries(categoryTotals).map(([cat, total]) => `
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <div class="text-sm text-gray-600 mb-1">${cat}</div>
+                    <div class="text-lg font-bold text-gray-800">¥${total.toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        // 取引リストレンダリング
+        function renderTransactionList() {
+            const filter = document.getElementById('filter').value;
+            const filtered = transactions.filter(t => filter === '全て' || t.type === filter);
+            const container = document.getElementById('transactionList');
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center py-12 text-gray-400">まだ取引がありません</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(t => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors mb-3">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center ${t.type === '収入' ? 'bg-green-100' : 'bg-red-100'}">
+                            <svg class="w-6 h-6 ${t.type === '収入' ? 'text-green-600' : 'text-red-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${t.type === '収入' ? 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' : 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'}"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-gray-800">${t.description}</div>
+                            <div class="text-sm text-gray-500">${t.category} · ${t.date} ${t.time}</div>
+                        </div>
+                        <div class="text-xl font-bold ${t.type === '収入' ? 'text-green-600' : 'text-red-600'}">
+                            ${t.type === '収入' ? '+' : '-'}¥${t.amount.toLocaleString()}
+                        </div>
+                    </div>
+                    <button onclick="deleteTransaction(${t.id})" class="ml-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // カレンダーレンダリング
+        function renderCalendar() {
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+
+            document.getElementById('monthTitle').textContent = currentMonth.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+
+            const grid = document.getElementById('calendarGrid');
+            let html = '';
+
+            // 空白セル
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                html += '<div class="calendar-day"></div>';
+            }
+
+            // 日付セル
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTransactions = transactions.filter(t => t.date === dateStr);
+                const dayTotal = dayTransactions.reduce((sum, t) => {
+                    return sum + (t.type === '収入' ? t.amount : -t.amount);
+                }, 0);
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                const isSelected = selectedDate === dateStr;
+
+                html += `
+                    <button onclick="selectDate('${dateStr}')" class="calendar-day p-2 rounded-lg border-2 transition-all hover:shadow-lg ${isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}">
+                        <div class="text-sm font-bold text-gray-800">${day}</div>
+                        ${dayTransactions.length > 0 ? `
+                            <div class="text-xs text-gray-500 mt-1">${dayTransactions.length}件</div>
+                            <div class="text-xs font-bold mt-1 ${dayTotal >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                ${dayTotal >= 0 ? '+' : ''}${dayTotal.toLocaleString()}
+                            </div>
+                        ` : ''}
+                    </button>
+                `;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        // 日付選択
+        function selectDate(dateStr) {
+            selectedDate = selectedDate === dateStr ? null : dateStr;
+            
+            if (selectedDate) {
+                const dayTransactions = transactions.filter(t => t.date === dateStr);
+                const detailsSection = document.getElementById('selectedDateDetails');
+                const title = document.getElementById('selectedDateTitle');
+                const container = document.getElementById('selectedDateTransactions');
+
+                title.textContent = `${dateStr} の取引`;
+                
+                if (dayTransactions.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">この日の取引はありません</p>';
+                } else {
+                    container.innerHTML = dayTransactions.map(t => `
+                        <div class="flex items-center justify-between p-4 bg-white rounded-lg mb-3">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center ${t.type === '収入' ? 'bg-green-100' : 'bg-red-100'}">
+                                    <svg class="w-5 h-5 ${t.type === '収入' ? 'text-green-600' : 'text-red-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${t.type === '収入' ? 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' : 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'}"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-bold text-gray-800">${t.description}</div>
+                                    <div class="text-sm text-gray-500">${t.category} · ${t.time}</div>
+                                </div>
+                                <div class="text-lg font-bold ${t.type === '収入' ? 'text-green-600' : 'text-red-600'}">
+                                    ${t.type === '収入' ? '+' : '-'}¥${t.amount.toLocaleString()}
+                                </div>
+                            </div>
+                            <button onclick="deleteTransaction(${t.id})" class="ml-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+                
+                detailsSection.classList.remove('hidden');
+            } else {
+                document.getElementById('selectedDateDetails').classList.add('hidden');
+            }
+            
+            renderCalendar();
+        }
+
+        // 初期化実行
+        init();
     </script>
-  </body>
+</body>
 </html>
